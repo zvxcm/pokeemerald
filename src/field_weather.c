@@ -157,7 +157,7 @@ void (*const gWeatherPalStateFuncs[])(void) =
 
 // This table specifies which of the color maps should be
 // applied to each of the background and sprite palettes.
-EWRAM_DATA u8 ALIGNED(2) sBasePaletteGammaTypes[32] = {
+static const u8 ALIGNED(2) sBasePaletteColorMapTypes[32] =
 {
     // background palettes
     COLOR_MAP_DARK_CONTRAST,
@@ -203,8 +203,6 @@ void StartWeather(void)
     {
         u8 index = AllocSpritePalette(PALTAG_WEATHER);
         CpuCopy32(gFogPalette, &gPlttBufferUnfaded[OBJ_PLTT_ID(index)], PLTT_SIZE_4BPP);
-         for (i = 0; i < NUM_PALS_TOTAL; i++)   
-            sBasePaletteColorMapTypes[i] = COLOR_MAP_DARK_CONTRAST;
         sPaletteColorMapTypes = sBasePaletteColorMapTypes;
         gWeatherPtr->contrastColorMapSpritePalIndex = index;
         gWeatherPtr->weatherPicSpritePalIndex = AllocSpritePalette(PALTAG_WEATHER_2);
