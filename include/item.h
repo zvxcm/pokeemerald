@@ -97,4 +97,8 @@ enum
 #undef ENUM_TM
 #undef ENUM_HM
 
+void ItemUseOutOfBattle_CannotUse(u8 taskId);
+
+ItemUseFunc ItemId_GetFieldFunc(u16 itemId);
+
 #endif // GUARD_ITEM_H

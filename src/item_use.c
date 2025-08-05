@@ -1137,3 +1137,13 @@ void ItemUseOutOfBattle_CannotUse(u8 taskId)
 }
 
 #undef tUsingRegisteredKeyItem
+
+#include "item.h"
+
+ItemUseFunc ItemId_GetFieldFunc(u16 itemId)
+{
+    if (itemId < ITEMS_COUNT)
+        return gItems[itemId].fieldUseFunc;
+    else
+        return ItemUseOutOfBattle_CannotUse;
+}
