@@ -943,3 +943,14 @@ u8 GetItemSecondaryId(u16 itemId)
 {
     return gItems[SanitizeItemId(itemId)].secondaryId;
 }
+
+u8 ItemId_GetHoldEffectParam(u16 itemId)
+{
+    return gItems[SanitizeItemId(itemId)].holdEffectParam;
+}
+
+void ItemId_GetHoldEffectParam_Script()
+{
+    VarSet(VAR_RESULT, ItemId_GetHoldEffectParam(VarGet(VAR_0x8004)));
+}
+
