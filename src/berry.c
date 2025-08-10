@@ -1068,8 +1068,6 @@ static bool32 BerryTreeGrow(struct BerryTree *tree)
         tree->watered4 = 0;
         tree->berryYield = 0;
         tree->stage = BERRY_STAGE_SPROUTED;
-        if (++tree->regrowthCount == 10)
-            *tree = gBlankBerryTree;
         break;
     }
     return TRUE;
