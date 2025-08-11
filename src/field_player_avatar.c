@@ -38,13 +38,14 @@ EWRAM_DATA struct ObjectEvent gObjectEvents[OBJECT_EVENTS_COUNT] = {};
 EWRAM_DATA struct PlayerAvatar gPlayerAvatar = {};
 
 // static declarations
-static u8 ObjectEventCB2_NoMovement2(void);
+
+static u8 ObjectEventCB2_NoMovement2();
 static bool8 TryInterruptObjectEventSpecialAnim(struct ObjectEvent *, u8);
 static void npc_clear_strange_bits(struct ObjectEvent *);
 static void MovePlayerAvatarUsingKeypadInput(u8, u16, u16);
-static void PlayerAllowForcedMovementIfMovingSameDirection(void);
-static bool8 TryDoMetatileBehaviorForcedMovement(void);
-static u8 GetForcedMovementByMetatileBehavior(void);
+static void PlayerAllowForcedMovementIfMovingSameDirection();
+static bool8 TryDoMetatileBehaviorForcedMovement();
+static u8 GetForcedMovementByMetatileBehavior();
 
 static bool8 ForcedMovement_None(void);
 static bool8 ForcedMovement_Slip(void);
@@ -231,7 +232,7 @@ static bool8 (*const sArrowWarpMetatileBehaviorChecks[])(u8) =
     [DIR_EAST - 1]  = MetatileBehavior_IsEastArrowWarp,
 };
 
-static const u8 sRivalAvatarGfxIds[][GENDER_COUNT] =
+static const u16 sRivalAvatarGfxIds[][2] =
 {
     [PLAYER_AVATAR_STATE_NORMAL]     = {OBJ_EVENT_GFX_RIVAL_BRENDAN_NORMAL,     OBJ_EVENT_GFX_RIVAL_MAY_NORMAL},
     [PLAYER_AVATAR_STATE_MACH_BIKE]  = {OBJ_EVENT_GFX_RIVAL_BRENDAN_MACH_BIKE,  OBJ_EVENT_GFX_RIVAL_MAY_MACH_BIKE},
@@ -243,7 +244,7 @@ static const u8 sRivalAvatarGfxIds[][GENDER_COUNT] =
     [PLAYER_AVATAR_STATE_WATERING]   = {OBJ_EVENT_GFX_BRENDAN_WATERING,         OBJ_EVENT_GFX_MAY_WATERING}
 };
 
-static const u8 sPlayerAvatarGfxIds[][GENDER_COUNT] =
+static const u16 sPlayerAvatarGfxIds[][2] =
 {
     [PLAYER_AVATAR_STATE_NORMAL]     = {OBJ_EVENT_GFX_BRENDAN_NORMAL,     OBJ_EVENT_GFX_MAY_NORMAL},
     [PLAYER_AVATAR_STATE_MACH_BIKE]  = {OBJ_EVENT_GFX_BRENDAN_MACH_BIKE,  OBJ_EVENT_GFX_MAY_MACH_BIKE},
@@ -255,19 +256,19 @@ static const u8 sPlayerAvatarGfxIds[][GENDER_COUNT] =
     [PLAYER_AVATAR_STATE_WATERING]   = {OBJ_EVENT_GFX_BRENDAN_WATERING,   OBJ_EVENT_GFX_MAY_WATERING},
 };
 
-static const u8 sFRLGAvatarGfxIds[GENDER_COUNT] =
+static const u16 sFRLGAvatarGfxIds[GENDER_COUNT] =
 {
     [MALE]   = OBJ_EVENT_GFX_RED,
     [FEMALE] = OBJ_EVENT_GFX_LEAF
 };
 
-static const u8 sRSAvatarGfxIds[GENDER_COUNT] =
+static const u16 sRSAvatarGfxIds[GENDER_COUNT] =
 {
     [MALE]   = OBJ_EVENT_GFX_LINK_RS_BRENDAN,
     [FEMALE] = OBJ_EVENT_GFX_LINK_RS_MAY
 };
 
-static const u8 sPlayerAvatarGfxToStateFlag[GENDER_COUNT][5][2] =
+static const u16 sPlayerAvatarGfxToStateFlag[GENDER_COUNT][5][2] =
 {
     [MALE] =
     {
@@ -317,27 +318,12 @@ static bool8 (*const sPlayerAvatarSecretBaseMatSpin[])(struct Task *, struct Obj
 
 void MovementType_Player(struct Sprite *sprite)
 {
-    UpdateObjectEventCurrentMovement(&gObjectEvents[sprite->data[0]], sprite, (bool8 (*)(struct ObjectEvent *, struct Sprite *))ObjectEventCB2_NoMovement2);
+    UpdateObjectEventCurrentMovement(&gObjectEvents[sprite->data[0]], sprite, ObjectEventCB2_NoMovement2);
 }
 
 static u8 ObjectEventCB2_NoMovement2(void)
 {
     return 0;
-}
-
-static void TryHidePlayerReflection(void)
-{
-    if (gObjectEvents[gPlayerAvatar.objectEventId].hasReflection) {
-        s16 x, y;
-        struct ObjectEvent *playerObjEvent = &gObjectEvents[gPlayerAvatar.objectEventId];
-        x = playerObjEvent->currentCoords.x;
-        y = playerObjEvent->currentCoords.y;
-        MoveCoords(DIR_SOUTH, &x, &y);
-        if (!MetatileBehavior_IsReflective(MapGridGetMetatileBehaviorAt(x, y)))
-            playerObjEvent->hideReflection = TRUE;
-        else 
-            playerObjEvent->hideReflection = FALSE;
-    }
 }
 
 void PlayerStep(u8 direction, u16 newKeys, u16 heldKeys)
@@ -347,7 +333,6 @@ void PlayerStep(u8 direction, u16 newKeys, u16 heldKeys)
     HideShowWarpArrow(playerObjEvent);
     if (gPlayerAvatar.preventStep == FALSE)
     {
-        TryHidePlayerReflection();
         Bike_TryAcroBikeHistoryUpdate(newKeys, heldKeys);
         if (TryInterruptObjectEventSpecialAnim(playerObjEvent, direction) == 0)
         {
@@ -358,8 +343,6 @@ void PlayerStep(u8 direction, u16 newKeys, u16 heldKeys)
                 MovePlayerAvatarUsingKeypadInput(direction, newKeys, heldKeys);
                 PlayerAllowForcedMovementIfMovingSameDirection();
             }
-
-            TryHidePlayerReflection();
         }
     }
 }
@@ -637,27 +620,9 @@ static void PlayerNotOnBikeMoving(u8 direction, u16 heldKeys)
         }
         else
         {
-            // Player collided with something. Certain collisions have special handling that precludes the normal collision effect.
-            // COLLISION_STOP_SURFING and COLLISION_PUSHED_BOULDER's effects are started by CheckForObjectEventCollision.
-            // COLLISION_LEDGE_JUMP's effect is handled further up in this function, so it will never reach this point.
-            // COLLISION_ROTATING_GATE is unusual however, this was probably included by mistake. When the player walks into a
-            // rotating gate that cannot rotate there is no additional handling, it's just a regular collision. Its exclusion here
-            // means that the player avatar won't update if they encounter this kind of collision. This has two noticeable effects:
-            // - Colliding with it head-on stops the player dead, rather than playing the walking animation and playing a bump sound effect
-            // - Colliding with it by changing direction won't turn the player avatar, their walking animation will just speed up.
-#ifdef BUGFIX
-            if (collision != COLLISION_STOP_SURFING
-             && collision != COLLISION_LEDGE_JUMP
-             && collision != COLLISION_PUSHED_BOULDER)
-#else
-            if (collision != COLLISION_STOP_SURFING
-             && collision != COLLISION_LEDGE_JUMP
-             && collision != COLLISION_PUSHED_BOULDER
-             && collision != COLLISION_ROTATING_GATE)
-#endif
-            {
+            u8 adjustedCollision = collision - COLLISION_STOP_SURFING;
+            if (adjustedCollision > 3)
                 PlayerNotOnBikeCollide(direction);
-            }
             return;
         }
     }
@@ -665,10 +630,7 @@ static void PlayerNotOnBikeMoving(u8 direction, u16 heldKeys)
     if (gPlayerAvatar.flags & PLAYER_AVATAR_FLAG_SURFING)
     {
         // same speed as running
-            if (heldKeys & B_BUTTON)
-            PlayerWalkFaster(direction);
-        else
-            PlayerWalkFast(direction);
+        PlayerWalkFast(direction);
         return;
     }
 
@@ -815,7 +777,7 @@ bool8 IsPlayerCollidingWithFarawayIslandMew(u8 direction)
     playerY = object->currentCoords.y;
 
     MoveCoords(direction, &playerX, &playerY);
-    mewObjectId = GetObjectEventIdByLocalIdAndMap(LOCALID_FARAWAY_ISLAND_MEW, MAP_NUM(MAP_FARAWAY_ISLAND_INTERIOR), MAP_GROUP(MAP_FARAWAY_ISLAND_INTERIOR));
+    mewObjectId = GetObjectEventIdByLocalIdAndMap(1, MAP_NUM(FARAWAY_ISLAND_INTERIOR), MAP_GROUP(FARAWAY_ISLAND_INTERIOR));
     if (mewObjectId == OBJECT_EVENTS_COUNT)
         return FALSE;
 
@@ -1250,32 +1212,32 @@ void StopPlayerAvatar(void)
     }
 }
 
-u8 GetRivalAvatarGraphicsIdByStateIdAndGender(u8 state, u8 gender)
+u16 GetRivalAvatarGraphicsIdByStateIdAndGender(u8 state, u8 gender)
 {
     return sRivalAvatarGfxIds[state][gender];
 }
 
-u8 GetPlayerAvatarGraphicsIdByStateIdAndGender(u8 state, u8 gender)
+u16 GetPlayerAvatarGraphicsIdByStateIdAndGender(u8 state, u8 gender)
 {
     return sPlayerAvatarGfxIds[state][gender];
 }
 
-u8 GetFRLGAvatarGraphicsIdByGender(u8 gender)
+u16 GetFRLGAvatarGraphicsIdByGender(u8 gender)
 {
     return sFRLGAvatarGfxIds[gender];
 }
 
-u8 GetRSAvatarGraphicsIdByGender(u8 gender)
+u16 GetRSAvatarGraphicsIdByGender(u8 gender)
 {
     return sRSAvatarGfxIds[gender];
 }
 
-u8 GetPlayerAvatarGraphicsIdByStateId(u8 state)
+u16 GetPlayerAvatarGraphicsIdByStateId(u8 state)
 {
     return GetPlayerAvatarGraphicsIdByStateIdAndGender(state, gPlayerAvatar.gender);
 }
 
-u8 unref_GetRivalAvatarGenderByGraphicsId(u8 gfxId)
+u8 unref_GetRivalAvatarGenderByGraphicsId(u16 gfxId)
 {
     switch (gfxId)
     {
@@ -1293,7 +1255,7 @@ u8 unref_GetRivalAvatarGenderByGraphicsId(u8 gfxId)
     }
 }
 
-u8 GetPlayerAvatarGenderByGraphicsId(u8 gfxId)
+u8 GetPlayerAvatarGenderByGraphicsId(u16 gfxId)
 {
     switch (gfxId)
     {
@@ -1362,7 +1324,7 @@ void SetPlayerAvatarStateMask(u8 flags)
     gPlayerAvatar.flags |= flags;
 }
 
-static u8 GetPlayerAvatarStateTransitionByGraphicsId(u8 graphicsId, u8 gender)
+static u8 GetPlayerAvatarStateTransitionByGraphicsId(u16 graphicsId, u8 gender)
 {
     u8 i;
 
@@ -1374,7 +1336,7 @@ static u8 GetPlayerAvatarStateTransitionByGraphicsId(u8 graphicsId, u8 gender)
     return PLAYER_AVATAR_FLAG_ON_FOOT;
 }
 
-u8 GetPlayerAvatarGraphicsIdByCurrentState(void)
+u16 GetPlayerAvatarGraphicsIdByCurrentState(void)
 {
     u8 i;
     u8 flags = gPlayerAvatar.flags;
@@ -1387,7 +1349,7 @@ u8 GetPlayerAvatarGraphicsIdByCurrentState(void)
     return 0;
 }
 
-void SetPlayerAvatarExtraStateTransition(u8 graphicsId, u8 transitionFlag)
+void SetPlayerAvatarExtraStateTransition(u16 graphicsId, u8 transitionFlag)
 {
     u8 stateFlag = GetPlayerAvatarStateTransitionByGraphicsId(graphicsId, gPlayerAvatar.gender);
 
@@ -1401,7 +1363,7 @@ void InitPlayerAvatar(s16 x, s16 y, u8 direction, u8 gender)
     u8 objectEventId;
     struct ObjectEvent *objectEvent;
 
-    playerObjEventTemplate.localId = LOCALID_PLAYER;
+    playerObjEventTemplate.localId = OBJ_EVENT_ID_PLAYER;
     playerObjEventTemplate.graphicsId = GetPlayerAvatarGraphicsIdByStateIdAndGender(PLAYER_AVATAR_STATE_NORMAL, gender);
     playerObjEventTemplate.x = x - MAP_OFFSET;
     playerObjEventTemplate.y = y - MAP_OFFSET;
@@ -1701,10 +1663,6 @@ static void Task_WaitStopSurfing(u8 taskId)
         gPlayerAvatar.preventStep = FALSE;
         UnlockPlayerFieldControls();
         DestroySprite(&gSprites[playerObjEvent->fieldEffectSpriteId]);
-#ifdef BUGFIX
-        // If this is not defined but the player steps into grass from surfing, they will appear over the grass instead of in the grass.
-        playerObjEvent->triggerGroundEffectsOnMove = TRUE;
-#endif
         DestroyTask(taskId);
     }
 }
@@ -2135,7 +2093,7 @@ static void Task_DoPlayerSpinExit(u8 taskId)
             tSpeed = 1;
             tCurY = (u16)(sprite->y + sprite->y2) << 4;
             sprite->y2 = 0;
-            CameraObjectFreeze();
+            CameraObjectReset2();
             object->fixedPriority = TRUE;
             sprite->oam.priority = 0;
             sprite->subpriority = 0;
@@ -2204,7 +2162,7 @@ static void Task_DoPlayerSpinEntrance(u8 taskId)
             tSubpriority = sprite->subpriority;
             tCurY = -((u16)sprite->y2 + 32) * 16;
             sprite->y2 = 0;
-            CameraObjectFreeze();
+            CameraObjectReset2();
             object->fixedPriority = TRUE;
             sprite->oam.priority = 1;
             sprite->subpriority = 0;
@@ -2239,7 +2197,7 @@ static void Task_DoPlayerSpinEntrance(u8 taskId)
                 object->fixedPriority = 0;
                 sprite->oam.priority = tPriority;
                 sprite->subpriority = tSubpriority;
-                CameraObjectReset();
+                CameraObjectReset1();
                 DestroyTask(taskId);
             }
             break;
