@@ -78,6 +78,8 @@ ItemUseFunc GetItemBattleFunc(u16 itemId);
 u8 GetItemSecondaryId(u16 itemId);
 u8 ItemId_GetHoldEffectParam(u16 itemId);
 void ItemId_GetHoldEffectParam_Script();
+u8 ItemId_GetHoldEffect(u16 itemId);
+
 
 /* Expands to:
  * enum
