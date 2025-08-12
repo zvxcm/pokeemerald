@@ -57,7 +57,7 @@ Route104_PrettyPetalFlowerShop_Pokemart_Plants:
 	.2byte DECOR_COLORFUL_PLANT
 	.2byte DECOR_BIG_PLANT
 	.2byte DECOR_GORGEOUS_PLANT
-	pokemartlistend
+	.2byte ITEM_NONE
 
 Route104_PrettyPetalFlowerShop_EventScript_WailmerPailGirl::
 	lock

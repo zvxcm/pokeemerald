@@ -241,6 +241,11 @@ struct Sprite
     /*0x43*/ u8 subpriority;
 };
 
+#define sCamera_MoveX data[0]
+#define sCamera_MoveY data[1]
+#define sCamera_FollowSpriteId data[2]
+#define sCamera_State data[3]
+
 struct OamMatrix
 {
     s16 a;
