@@ -690,12 +690,7 @@ u8 GetMostSuitableMonToSwitchInto(void)
 
     while (invalidMons != (1 << PARTY_SIZE) - 1) // All mons are invalid.
     {
-#ifdef BUGFIX
         bestDmg = 255;
-#else
-        bestDmg = TYPE_MUL_NO_EFFECT;
-#endif
-
         bestMonId = PARTY_SIZE;
         // Find the mon whose type is the most suitable offensively.
         for (i = firstId; i < lastId; i++)
@@ -714,15 +709,8 @@ u8 GetMostSuitableMonToSwitchInto(void)
                 u8 typeDmg = TYPE_MUL_NORMAL;
                 ModulateByTypeEffectiveness(gBattleMons[opposingBattler].types[0], type1, type2, &typeDmg);
                 ModulateByTypeEffectiveness(gBattleMons[opposingBattler].types[1], type1, type2, &typeDmg);
-
-                /* Possible bug: this comparison gives the type that takes the most damage, when
-                a "good" AI would want to select the type that takes the least damage. Unknown if this
-                is a legitimate mistake or if it's an intentional, if weird, design choice */
-#ifdef BUGFIX                
+                
                 if (bestDmg > typeDmg)
-#else
-                if (bestDmg < typeDmg)
-#endif
                 {
                     bestDmg = typeDmg;
                     bestMonId = i;
